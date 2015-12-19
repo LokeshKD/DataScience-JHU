@@ -1,14 +1,13 @@
 ######
 # This R script is to get the average of the subject/activity as per the
 # Samsung data set provided.
-# Details are in CodeBook.md
+# we are in the working directory where train and test directories are.
 ######
 
 ## Load the requried libraries.
 library(data.table)
 library(reshape2)
 
-## we are in the working directory where train and test directories are.
 
 ## Merges the training and the test sets to create one data set
 subject <- rbind(read.table("train/subject_train.txt"), read.table("test/subject_test.txt"))
