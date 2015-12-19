@@ -3,12 +3,13 @@
 ### Description:
  This R script called run_analysis.R does the following. 
 
-1. Merges the training and the test sets to create one data set.
-2. Extracts only the measurements on the mean and standard deviation for each measurement. 
-3. Uses descriptive activity names to name the activities in the data set
-4. Appropriately labels the data set with descriptive variable names. 
-5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
-
+    * row bind all respective subject, X and Y data sets from train and test directories.
+    * extract mean and sd columns of Y.
+    * assign column names to all from the data descriptions files provided.
+    * column bind all subject, X and Y, creating a single complete data set.
+    * computes average on all columns "melted" with Subject.ID and ACtivity.
+    * writes in a free form text format into output.txt file.
+    
 #### Links to Data
  
  A full description of data:
