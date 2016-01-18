@@ -1,0 +1,165 @@
+---
+title: "Impact of Weather on Health & Economy in USA - A Data Scientist Approach"
+author: "Lokesh KD"
+date: "16 January 2016"
+output: html_document
+---
+
+### Synopsis:
+  The goal of this report is to analyze the impact of Weather Events in United States of
+  America on Health and Economy across the Country. Data for analysis is taken from NOAA -
+  U.S National Oceanic and Atmospheric Administrations during the time period 1950 - 2011.
+  
+  The Analysis in this report is based on "Fatalities" & "Injuries" for Health, "Crop
+  Damage" and "Property Damage" were considered for Economy.
+  
+  Based on the analysis performed and the results obtained, we could infer that Tornados and
+  High Temperatures have great impact on Health while Flood, Drought and Tornados have high
+  impact on Economy in United States of America.
+   
+  Data is obtained from this URL:      
+  https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
+  
+### Data Processing.
+  As per the expectations, we start with the raw CSV file.
+```{r echo = TRUE}
+  #Load the required libraries
+  library(plyr)
+  library(stats)
+
+  # Check for file existence.
+  if (!file.exists("repdata_data_StormData.csv")) {
+    if (!file.exists("repdata_data_StormData.csv.bz2")) {
+      print("Please download the repdata_data_StormData.csv.bz2 from Assignement page link")
+      stop()
+    }
+    # Unzip the bz2file.
+    bunzip2("repdata_data_StormData.csv.bz2")
+  }
+
+  # Read the file and load the data.
+  WeatherData <- read.csv("repdata_data_StormData.csv", header = TRUE)
+
+  # Examine the data
+  dim(WeatherData)
+  head(WeatherData)
+  
+```
+  Let us get the subsets to analyze Health and Economic impact.  
+  First Health related.
+```{r echo=TRUE}
+  
+  # Get and aggregate subset(s) for Health Parametes impact.
+  Fatal <- aggregate(FATALITIES ~ EVTYPE, WeatherData, sum)
+  Injury <- aggregate(INJURIES ~ EVTYPE, WeatherData, sum)
+```
+  Now, onto Economy related...
+```{r echo = TRUE}
+  # Get subset for Economics with related columns.
+  EconomicData <- subset(WeatherData, select = c(EVTYPE, PROPDMG:CROPDMGEXP))
+  
+  str(EconomicData)
+```
+  So, we have 19 levels of PROPDMGEXP and 9 levels of CROPDMGEXP.
+  We shall compute power of 10 based on the levels we understand
+  and multiply and store them in respective DMG variables.
+  i.e PROPDMG <- PROPDMG * 10^ (vlaue of PROPDMGEXP)
+  i.e CROPDMG <- CROPDMG * 10^ (vlaue of CROPDMGEXP)
+  For values we do not understand we substitue 0.
+```{r echo = TRUE}
+  
+  ComputeDamage <- function(Dmg, DmgExp) {
+    
+    for (i in 1:length(DmgExp)) {
+     if (toupper(DmgExp[i]) == "H") # Hunderd
+       Dmg[i] <- Dmg[i] * 10 ^ 2
+     else if (toupper(DmgExp[i]) == "K") # Kilo
+       Dmg[i] <- Dmg[i] * 10 ^ 3
+     else if (toupper(DmgExp[i]) == "M") # Million
+       Dmg[i] <- Dmg[i] * 10 ^ 6
+     else if (toupper(DmgExp[i]) == "B") # Billion
+       Dmg[i] <- Dmg[i] * 10 ^ 9
+     else if (DmgExp[i] %in% c("" , "-" , "?" , "+")) # Something we do not understand?
+       Dmg[i] <- Dmg[i] * 10 ^ 0
+     else if (is.numeric(DmgExp[i]))
+       Dmg[i] <- Dmg[i] * 10 ^ as.numeric(DmgExp[i])
+     else                               
+       Dmg[i] <- Dmg[i] * 10 ^ 0
+    }
+    return (Dmg)
+  }
+  
+  # Call ComputeDamage to re-calculate Property and Crop Damages.
+  EconomicData$Pdmg <- ComputeDamage(EconomicData$PROPDMG, EconomicData$PROPDMGEXP)
+  EconomicData$Cdmg <- ComputeDamage(EconomicData$CROPDMG, EconomicData$CROPDMGEXP)
+  
+  # Get the aggregate of the Economic damgages by events
+  PropDmg <- aggregate(Pdmg ~ EVTYPE, EconomicData, sum)
+  CropDmg <- aggregate(Cdmg ~ EVTYPE, EconomicData, sum)
+  
+  # Let us look at the new variables created.
+  # Check on the correctness of the values in it.
+  head(PropDmg)
+  head(CropDmg)
+```
+### Results.
+  Here we shall answer the questions as posed in the assignment, now that we have
+  loaded and processed the data the way we want to use and represent. we shall 
+  barplot the data we have for both the questions.
+```{r echo = FALSE}
+  cat ("Question 1: Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?")
+```
+```{r echo = TRUE}
+  # Let us get the top 10 events causing maximum damage to health.
+  Fatal10 <- head(arrange(Fatal, desc(FATALITIES)), 10)
+  Injury10 <- head(arrange(Injury, desc(INJURIES)), 10)
+  
+  # Lets look at the top few rows.
+  head(Fatal10)
+  head(Injury10)
+  
+  # Health related plots
+  par(mfrow=c(1,2), mar=c(8,4,4,2), cex = 0.7)
+  
+  # Plot the Fatalities
+  barplot(Fatal10$FATALITIES, names.arg = Fatal10$EVTYPE, col = "blue", las = 3,
+          main = "Top 10 Weather Events resulting in Fatalities",
+          ylab = "Number of Fatalities")
+  
+  # Plor the Injuries
+  barplot(Injury10$INJURIES, names.arg = Injury10$EVTYPE, col = "blue", las = 3,
+          main = "Top 10 Weather Events resulting in Injuries",
+          ylab = "Number of Injuries")
+```
+```{r echo = FALSE}
+  cat("By the histograms, weather event affecting public health most is Tornados for both Fatalities and Injuries")
+  cat ("Question 2: Across the United States, which types of events have the greatest economic consequences?")
+```
+```{r echo = TRUE}
+  # Let us get the top 10 events causing maximum damage to property
+  # sorted by amount of damage stroed in Pdmg and Cdmg.
+
+  PropDmg10 <- head(arrange(PropDmg, desc(Pdmg)), 10)
+  CropDmg10 <- head(arrange(CropDmg, desc(Cdmg)), 10)
+  
+  # Let us look at the top few lines.
+  head(PropDmg10)
+  head(CropDmg10)
+  
+  # Economy related plots
+  par(mfrow=c(1,2), mar=c(8,4,4,2), cex = 0.7)
+  
+  # Plot the Fatalities
+  barplot(PropDmg10$Pdmg/10^9, names.arg = PropDmg10$EVTYPE, col = "blue", las = 3,
+          main = "Top 10 Weather Events Damaging Property",
+          ylab = "Amount of Damage in $ Billions")
+  
+  # Plor the Injuries
+  barplot(CropDmg10$Cdmg/10^9, names.arg = CropDmg10$EVTYPE, col = "blue", las = 3,
+          main = "Top 10 Weather Events Damaging Crops",
+          ylab = "Amount of Damage in $ Billions")
+  
+```
+```{r echo = FALSE}
+  cat("Answer 2: By the histograms above, weather events FLOODS damage Propery the most follwed by Hurricane/Typhoon, Tornado & STROM SURGE. Drought on the other hand damage the Crops most followed by FLOOD, RIVER FLOOD & ICE STORM" )
+```
