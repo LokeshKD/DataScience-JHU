@@ -1,0 +1,80 @@
+---
+title: "Tooth Growth Analysis"
+author: "Lokesh KD"
+date: "27 January 2016"
+output: html_document
+---
+
+### Overview:
+    The goal of this project is to analyze the impact of C vitamin dosage in two forms, i.e
+    Orange Juice and a Supplement(tablet?), on the tooth length of Pigs under test.
+    
+```{r echo = TRUE}
+  library(data.table)
+  library(lattice)
+
+  # Load the data.
+  data("ToothGrowth")
+  TG <- data.table(ToothGrowth)
+  
+  # Let us examine the contents of the data loaded.
+  dim(TG)
+  str(TG)
+  summary(TG)
+
+```  
+    So, we have 60 observations with 3 parameters.  
+    Two factored observations "OJ" and "VC" as supplements  
+    Dose varies with 3 quantities Min = 0.5, Median = 1.0 and Max = 2.0  
+    
+### Basic Summary:
+    Let us examine the mean and standard deviation of the tooth length.  
+    Also, plot the impact on Tooth length, based on does, grouped by Supplement.
+```{r echo = TRUE}
+
+    mean(TG$len)
+    sd(TG$len)
+    
+    # Plot the graph grouped by Supplement.
+    xyplot(dose ~ len | supp, TG, type = "l", layout = c(1,2))
+
+```   
+
+    Per the graph we plotted with the provided sample data observations, it is easier to 
+    see that on lower dosages of Vitamin C, i.e 0.5 and 1.0, mean tooth growth is positive.  
+    What is interesting is the better impact of Orange Juice on the mean of the tooth growth. 
+    
+### Hypothesis Testing:
+#### Assumptions:
+  * Tooth Growth has a positive impact with supplements.  
+  * Orange Juice has a better effect on Tooth Growth.
+  
+#### Hypothesis Testing for OJ vs VC  
+```{r echo = TRUE}
+
+    # T-test based on Tooth Growth in length differentiated by supplement.
+    t.test(TG$len[TG$supp == "OJ"],TG$len[TG$supp == "VC"], alternative = "greater", 
+           paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+    
+        
+```   
+    
+#### Hypothesis Testing based on the Dosages:  
+```{r echo = TRUE}
+    
+    # T-test based on Tooth Growth in length differentiated by dosage .5 & 1
+    t.test(TG$len[TG$dose == .5],TG$len[TG$dose == 1], alternative = "less", 
+           paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+    
+    # T-test based on Tooth Growth in length differentiated by dosage  1 & 2
+    t.test(TG$len[TG$dose == 1],TG$len[TG$dose == 2], alternative = "less", 
+           paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+    
+```   
+
+#### Conclusion:  
+    1. Based on the T-tests between OJ and VC, we have p-value 0.03, which is higher than  
+       0.05 proving Orange Juice has a better impact on Tooth Growth.
+    2. Based on T-Tests between dosages 0.5 & 1, 1 & 2 p-values are way below 0.05 proving  
+       that higher does of supplements have higer impact.
+    
