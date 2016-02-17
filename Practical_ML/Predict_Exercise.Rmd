@@ -1,0 +1,132 @@
+---
+title: "Predicting Human Exercise"
+author: "Lokesh KD"
+date: "17 February 2016"
+output: html_document
+---
+
+### Overview:
+    The goal of this project is to predict the manner in which 6 participants did their  
+    exercise using the data from accelerometers on the belt, forearm, arm, and dumbell.  
+    They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  
+    More information is available from the website here:   
+    [link] (http://groupware.les.inf.puc-rio.br/har)  
+    
+### Getting and Cleaning the Data:    
+```{r echo = TRUE}
+  # Load the required libraries.
+  library(caret)
+  
+  # Get the data.
+  if (!file.exists("pml-training.csv")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+                  destfile = "pml-training.csv")
+  }
+
+  if (!file.exists("pml-testing.csv")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+                  destfile = "pml-testing.csv")
+  }
+
+  # Load the Data.
+  pml_train <- read.csv("pml-training.csv")
+  pml_test  <- read.csv("pml-testing.csv")
+
+  # By examining the data sets in Rstudio, We notice that there are quite a lot of
+  # NA cloumns and that first 7 columns are not relevant for our Purpose.
+  
+  # Clean the Data.
+  # Remove the first 7 columns.
+  pml_train <- pml_train[,-(1:7)]
+  pml_test  <- pml_test[,-(1:7)]
+  
+  # Remove near Zero variables using train data set.
+  nzv <- nearZeroVar(pml_train)
+  pml_train <- pml_train[, -(nzv)]
+  pml_test  <- pml_test[, -(nzv)]
+  
+  # Remove Columns with NA from test set.
+  # Be carful with the last column. classe in Train and problem_id in Test.
+  nonNAColumns <- names(pml_train[,colSums(is.na(pml_train)) == 0])
+  nonNAColumns <- nonNAColumns[-length(nonNAColumns)]
+  pml_train <- pml_train[,c(nonNAColumns,"classe")]
+  pml_test  <- pml_test[,c(nonNAColumns, "problem_id")]
+  
+```   
+### Exploring the Data:   
+    Now that we have tidy data sets, let us explore...   
+    
+```{r echo = TRUE}
+  dim(pml_train); dim(pml_test)
+  names(pml_train); names(pml_test)  
+```   
+
+  Ok. So we have 19622 observations with 53 variables in Training set and 20 Observations   
+  with 53 variables in Final Test set. Only difference we see is the last coulmn.   
+  "classe" in Training set and "problem_id" in Final Test set.  
+  
+  Let us move on to building machine learning algorithms...   
+  
+### Machine Learning Models:   
+
+  This being a classification problem, we have 2 choices to build our Machine Learning   
+  algorithm. "rpart" and "rf".   
+  We shall user PCA for our preprocess with Cross Validation for training.
+  We are using PCA to reduce the higly corelated variables.
+  Let us first partition the traning data into 2 - 60% training and 40% testing.   
+  
+```{r echo =TRUE}
+  set.seed(1708)
+  inTrain = createDataPartition(pml_train$classe, p = 0.60, list = F)
+  Train = pml_train[inTrain,]
+  Test = pml_train[-inTrain,]
+  
+```   
+
+#### Train the Models:   
+```{r echo = TRUE}
+  # Random Forests with PCA and cross validation training control.
+  mRF <- train(classe ~ ., data = Train, preProcess="pca", method="rf",
+                 trControl=trainControl(method="cv", verboseIter=F))
+    
+  # Decision Trees with PCA and Cross Validation training control.
+  mDT <- train(classe ~ ., data = Train, preProcess="pca", method="rpart",
+                 trControl=trainControl(method="cv", verboseIter=F))
+  
+```   
+
+#### Predicting with Trained Models:   
+
+```{r echo = TRUE}
+
+  # Predictions...
+  pRF <- predict(mRF, Test)  
+  pDT <- predict(mDT, Test)
+  
+  # Confusion Matrix to test the accuracy.
+  # With RF
+  confusionMatrix(Test$classe, pRF)
+  
+  # With DT
+  confusionMatrix(Test$classe, pDT)
+```   
+
+### Conclusion:   
+  We could stack the models if they were any close. In Our Case Random Forests with  
+  Cross Validation is standing out with 97.06% accurarcy, While "rpart" is with accuracy   
+  38.53%.  We shall build our final model and prediciton with Ranadom Forests.   
+  
+#### Out of Sample Error:   
+  Out of Sample error in "rf" case is 1 - 0.9706 = 2.94% which means when applied to the   
+  final Test set, we can expect approximately 1 error out of 20 Observations we have.   
+```{r echo = TRUE}
+  predict(mRF, pml_test)  
+```  
+
+
+  
+
+
+
+
+
